@@ -3,6 +3,8 @@ const state = {
   filtered: [],
 };
 
+const dataVersion = "20260704081717";
+
 const auth = {
   user: "admin",
   passwordHash: "da9d0e1b2df69898f6e14abe094230337ce034f834c671d2837f3b2c434332fd",
@@ -80,8 +82,8 @@ async function sha256(value) {
 
 async function loadPlayers() {
   const [playersResponse, metadataResponse] = await Promise.all([
-    fetch("data/players.json"),
-    fetch("data/metadata.json"),
+    fetch(`data/players.json?v=${dataVersion}`, { cache: "no-store" }),
+    fetch(`data/metadata.json?v=${dataVersion}`, { cache: "no-store" }),
   ]);
   state.players = await playersResponse.json();
   const metadata = await metadataResponse.json();
