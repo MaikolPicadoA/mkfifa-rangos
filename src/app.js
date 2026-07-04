@@ -17,6 +17,7 @@ const els = {
   loginError: document.querySelector("#loginError"),
   appShell: document.querySelector("#appShell"),
   sourceCount: document.querySelector("#sourceCount"),
+  updatedAt: document.querySelector("#updatedAt"),
   searchInput: document.querySelector("#searchInput"),
   platform: document.querySelector("#platform"),
   maxPrice: document.querySelector("#maxPrice"),
@@ -78,9 +79,14 @@ async function sha256(value) {
 }
 
 async function loadPlayers() {
-  const response = await fetch("data/players.json");
-  state.players = await response.json();
+  const [playersResponse, metadataResponse] = await Promise.all([
+    fetch("data/players.json"),
+    fetch("data/metadata.json"),
+  ]);
+  state.players = await playersResponse.json();
+  const metadata = await metadataResponse.json();
   els.sourceCount.textContent = `${state.players.length} jugadores`;
+  els.updatedAt.textContent = `Actualizado UTC: ${formatUtcDate(metadata.updatedAtUtc)}`;
   fillPositions();
 }
 
@@ -251,6 +257,13 @@ function formatCoins(value) {
 function formatRange(range) {
   if (!range) return "-";
   return `${formatCoins(range.min)} - ${formatCoins(range.max)}`;
+}
+
+function formatUtcDate(value) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toISOString().replace("T", " ").replace(/\.\d{3}Z$/, " UTC");
 }
 
 function normalize(value) {

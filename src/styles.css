@@ -122,10 +122,17 @@ h2 {
 
 .source {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   align-items: center;
   gap: 14px;
   color: var(--muted);
-  white-space: nowrap;
+  text-align: right;
+}
+
+#updatedAt {
+  font-size: 13px;
+  font-weight: 800;
 }
 
 .status {
@@ -289,5 +296,7 @@ td b {
 
   .source {
     margin-top: 18px;
+    justify-content: flex-start;
+    text-align: left;
   }
 }
