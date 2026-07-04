@@ -1,0 +1,34 @@
+90 LM ST LW R 5 3 84.8 Rashford 94 Pac 88 Sho 90 Pas 90 Dri 45 Def 78 Phy
+95,500
+103,000
+PRICE RANGE 41,250 - 800,000
+88 CAM ++ CM R 4 3 87.5 Corley 86 Pac 87 Sho 88 Pas 89 Dri 75 Def 80 Phy
+34,700
+31,650
+65 GK R 1 3 Borgogno 62 Div 65 Han 60 Kic 64 Ref 42 Spd 66 Pos
+200
+6,400
+65 ST LM LW R 2 3 59.5 Priske 73 Pac 64 Sho 55 Pas 62 Dri 28 Def 71 Phy
+400
+8,400
+66 CAM CM LM ST R 3 3 60.9 Miljevic 60 Pac 60 Sho 63 Pas 72 Dri 44 Def 58 Phy
+200
+0
+66 LM RM CM LW R 3 4 64.9 Gauto 81 Pac 62 Sho 62 Pas 67 Dri 29 Def 57 Phy
+200
+9,800
+67 ST RM RW R 3 4 61.0 Ferrari 69 Pac 68 Sho 56 Pas 67 Dri 28 Def 62 Phy
+200
+6,900
+67 CB L 3 2 57.2 Campi 35 Pac 45 Sho 58 Pas 57 Dri 66 Def 77 Phy
+200
+9,400
+68 LM RM CM LW R 3 2 63.7 Rios 74 Pac 59 Sho 64 Pas 71 Dri 45 Def 47 Phy
+200
+0
+68 RB RM R 3 2 63.3 Enrique 74 Pac 49 Sho 52 Pas 68 Dri 67 Def 74 Phy
+200
+10,000
+68 CB L 2 3 60.6 Quiros 62 Pac 36 Sho 56 Pas 57 Dri 68 Def 65 Phy
+200
+9,900

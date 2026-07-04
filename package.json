@@ -1,0 +1,10 @@
+{
+  "name": "futbin-rangos",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node scripts/server.mjs",
+    "parse": "node scripts/parse-futbin-text.mjs data/futbin-raw.txt data/players.json"
+  }
+}
