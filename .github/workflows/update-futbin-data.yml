@@ -1,0 +1,42 @@
+name: Actualizar data FUTBIN
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout gh-pages
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Playwright
+        run: |
+          npm install --no-save playwright
+          npx playwright install chromium --with-deps
+
+      - name: Update FUTBIN data
+        run: npm run update:data
+
+      - name: Commit and publish
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/players.json data/metadata.json index.html src/app.js
+          if git diff --cached --quiet; then
+            echo "No changes to publish."
+          else
+            git commit -m "Refresh FUTBIN data"
+            git push origin gh-pages
+          fi

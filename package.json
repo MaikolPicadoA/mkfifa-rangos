@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "node scripts/server.mjs",
+    "update:data": "node scripts/update-futbin-data.mjs",
     "parse": "node scripts/parse-futbin-text.mjs data/futbin-raw.txt data/players.json"
   }
 }
