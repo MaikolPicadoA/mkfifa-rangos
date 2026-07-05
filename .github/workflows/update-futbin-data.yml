@@ -9,6 +9,7 @@ permissions:
 jobs:
   update-data:
     runs-on: ubuntu-latest
+    timeout-minutes: 35
 
     steps:
       - name: Checkout gh-pages
@@ -28,6 +29,14 @@ jobs:
 
       - name: Update FUTBIN data
         run: npm run update:data
+
+      - name: Upload diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: futbin-update-diagnostics
+          path: artifacts/
+          if-no-files-found: ignore
 
       - name: Commit and publish
         run: |

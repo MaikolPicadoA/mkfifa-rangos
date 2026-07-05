@@ -1,14 +1,17 @@
 import { chromium } from "playwright";
-import { readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const sourceUrl = "https://www.futbin.com/26/latest";
 const maxPages = Number(process.env.MAX_PAGES || 255);
+const maxAttempts = Number(process.env.PAGE_RETRIES || 5);
+const retryBaseMs = Number(process.env.RETRY_BASE_MS || 12000);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, "..");
 
 const dataDir = path.join(rootDir, "data");
+const artifactsDir = path.join(rootDir, "artifacts");
 const playersPath = path.join(dataDir, "players.json");
 const metadataPath = path.join(dataDir, "metadata.json");
 const indexPath = path.join(rootDir, "index.html");
@@ -16,26 +19,25 @@ const appPath = path.join(rootDir, "src", "app.js");
 
 const browser = await chromium.launch({
   headless: true,
-  args: ["--disable-blink-features=AutomationControlled"],
+  args: [
+    "--disable-blink-features=AutomationControlled",
+    "--disable-dev-shm-usage",
+    "--no-sandbox",
+  ],
 });
 
 try {
-  const page = await browser.newPage({
-    userAgent:
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36",
-    locale: "es-ES",
-  });
+  await mkdir(artifactsDir, { recursive: true });
+  let page = await createPage();
 
   const players = [];
   const seenUrls = new Set();
   const pageCounts = [];
 
   for (let pageNumber = 1; pageNumber <= maxPages; pageNumber += 1) {
-    const pageUrl = pageNumber === 1 ? sourceUrl : `${sourceUrl}?page=${pageNumber}`;
-    await page.goto(pageUrl, { waitUntil: "domcontentloaded", timeout: 45000 });
-    await page.waitForSelector("tr.player-row", { timeout: 30000 });
-
-    const pagePlayers = await page.evaluate(parsePlayersFromPage, pageNumber);
+    const result = await scrapePageWithRetries(page, pageNumber);
+    page = result.page;
+    const pagePlayers = result.players;
     if (!pagePlayers.length) {
       pageCounts.push({ page: pageNumber, count: 0 });
       break;
@@ -83,6 +85,98 @@ try {
   console.log(`Updated ${players.length} players from ${pageCounts.length} pages at ${updatedAtUtc}`);
 } finally {
   await browser.close();
+}
+
+async function createPage() {
+  const page = await browser.newPage({
+    userAgent:
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36",
+    locale: "es-ES",
+    viewport: { width: 1366, height: 900 },
+    extraHTTPHeaders: {
+      "accept-language": "es-ES,es;q=0.9,en-US;q=0.8,en;q=0.7",
+    },
+  });
+  page.setDefaultTimeout(60000);
+  return page;
+}
+
+async function scrapePageWithRetries(page, pageNumber) {
+  let activePage = page;
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const pageUrl = pageNumber === 1 ? sourceUrl : `${sourceUrl}?page=${pageNumber}`;
+
+    try {
+      console.log(`Loading page ${pageNumber}/${maxPages}, attempt ${attempt}/${maxAttempts}`);
+      await activePage.goto(pageUrl, { waitUntil: "domcontentloaded", timeout: 90000 });
+      await activePage.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
+      await activePage.waitForFunction(
+        () => document.querySelectorAll("tr.player-row").length > 0,
+        undefined,
+        { timeout: 75000 },
+      );
+
+      const pagePlayers = await activePage.evaluate(parsePlayersFromPage, pageNumber);
+      if (pagePlayers.length > 0) {
+        return { page: activePage, players: pagePlayers };
+      }
+
+      throw new Error("La tabla cargo, pero no devolvio jugadores.");
+    } catch (error) {
+      lastError = error;
+      const diagnostic = await getPageDiagnostic(activePage).catch((diagError) => ({
+        title: "diagnostic failed",
+        url: pageUrl,
+        snippet: diagError.message,
+        blocked: false,
+      }));
+      console.warn(
+        [
+          `Page ${pageNumber} attempt ${attempt} failed: ${error.message}`,
+          `Title: ${diagnostic.title}`,
+          `URL: ${diagnostic.url}`,
+          `Blocked: ${diagnostic.blocked ? "yes" : "no"}`,
+          `Snippet: ${diagnostic.snippet}`,
+        ].join("\n"),
+      );
+
+      await saveFailureScreenshot(activePage, pageNumber, attempt).catch(() => {});
+      if (attempt === maxAttempts) break;
+
+      const waitMs = retryBaseMs * attempt + Math.floor(Math.random() * 4000);
+      await activePage.waitForTimeout(waitMs).catch(() => {});
+
+      if (attempt % 2 === 0 || diagnostic.blocked) {
+        await activePage.close().catch(() => {});
+        activePage = await createPage();
+      }
+    }
+  }
+
+  throw new Error(
+    `No se pudo leer FUTBIN page=${pageNumber} despues de ${maxAttempts} intentos. ` +
+      `No se publica data parcial. Ultimo error: ${lastError?.message || "desconocido"}`,
+  );
+}
+
+async function getPageDiagnostic(page) {
+  return page.evaluate(() => {
+    const text = (document.body?.innerText || "").replace(/\s+/g, " ").trim();
+    const blocked = /just a moment|checking your browser|captcha|cloudflare|access denied|enable javascript|rate limit/i.test(text);
+    return {
+      title: document.title,
+      url: location.href,
+      snippet: text.slice(0, 500),
+      blocked,
+    };
+  });
+}
+
+async function saveFailureScreenshot(page, pageNumber, attempt) {
+  const file = path.join(artifactsDir, `futbin-page-${pageNumber}-attempt-${attempt}.png`);
+  await page.screenshot({ path: file, fullPage: true, timeout: 15000 });
 }
 
 async function updateCacheVersion(version) {
